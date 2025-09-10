@@ -1,8 +1,12 @@
 const img = document.getElementById("pointer");
 
-// Target location (change these coordinates as needed)
-const targetLat = 42.3601; // example: Boston
+// Target location (change to your destination)
+const targetLat = 42.3601;  // Example: Boston
 const targetLon = -71.0589;
+
+let currentLat = null;
+let currentLon = null;
+let deviceHeading = 0; // in degrees
 
 // Calculate bearing from current position to target
 function getBearing(lat1, lon1, lat2, lon2) {
@@ -18,18 +22,25 @@ function getBearing(lat1, lon1, lat2, lon2) {
             Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
 
   let brng = Math.atan2(y, x);
-  return (toDeg(brng) + 360) % 360; // normalize 0–360 degrees
+  return (toDeg(brng) + 360) % 360;
 }
 
-// Continuously track your location and rotate the pointer
+// Update pointer rotation
+function updatePointer() {
+  if (currentLat === null || currentLon === null) return;
+
+  const bearing = getBearing(currentLat, currentLon, targetLat, targetLon);
+  const rotation = bearing - deviceHeading; // relative to phone heading
+  img.style.transform = `translate(-50%, -50%) rotate(${rotation + 90}deg)`;
+}
+
+// Watch GPS position
 if ("geolocation" in navigator) {
   navigator.geolocation.watchPosition(
     (pos) => {
-      const { latitude, longitude } = pos.coords;
-      const bearing = getBearing(latitude, longitude, targetLat, targetLon);
-
-      // Rotate the pointer image (+90 degrees if needed)
-      img.style.transform = `translate(-50%, -50%) rotate(${bearing + 90}deg)`;
+      currentLat = pos.coords.latitude;
+      currentLon = pos.coords.longitude;
+      updatePointer();
     },
     (err) => {
       console.error("Geolocation error:", err.message);
@@ -42,6 +53,26 @@ if ("geolocation" in navigator) {
   );
 } else {
   console.error("Geolocation is not supported by your browser.");
+}
+
+// Listen for device orientation (compass heading)
+if (window.DeviceOrientationEvent) {
+  window.addEventListener("deviceorientationabsolute", (event) => {
+    if (event.absolute === true || event.alpha !== null) {
+      deviceHeading = event.alpha; // 0 = North
+      updatePointer();
+    }
+  }, true);
+
+  // Fallback for browsers that only support deviceorientation
+  window.addEventListener("deviceorientation", (event) => {
+    if (event.alpha !== null && deviceHeading === 0) {
+      deviceHeading = event.alpha;
+      updatePointer();
+    }
+  }, true);
+} else {
+  console.error("DeviceOrientationEvent is not supported by your browser.");
 }
 
 
@@ -78,5 +109,6 @@ btn.addEventListener("click", () => {
     infoDiv.textContent = "Geolocation is not supported by your browser.";
   }
 });
+
 
 
