@@ -1,7 +1,7 @@
 const img = document.getElementById("pointer");
 
-// Target location (change to your destination)
-const targetLat = 42.3601;  // Example: Boston
+// Target location (Boston)
+const targetLat = 42.3601;
 const targetLon = -71.0589;
 
 let currentLat = null;
@@ -30,11 +30,11 @@ function updatePointer() {
   if (currentLat === null || currentLon === null) return;
 
   const bearing = getBearing(currentLat, currentLon, targetLat, targetLon);
-  const rotation = bearing - deviceHeading; // relative to phone heading
+  const rotation = bearing - deviceHeading;
   img.style.transform = `translate(-50%, -50%) rotate(${rotation + 90}deg)`;
 }
 
-// Watch GPS position
+// Watch GPS
 if ("geolocation" in navigator) {
   navigator.geolocation.watchPosition(
     (pos) => {
@@ -42,39 +42,40 @@ if ("geolocation" in navigator) {
       currentLon = pos.coords.longitude;
       updatePointer();
     },
-    (err) => {
-      console.error("Geolocation error:", err.message);
-    },
-    {
-      enableHighAccuracy: true,
-      timeout: 5000,
-      maximumAge: 0
-    }
+    (err) => console.error("Geolocation error:", err.message),
+    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
   );
 } else {
-  console.error("Geolocation is not supported by your browser.");
+  console.error("Geolocation not supported");
 }
 
-// Listen for device orientation (compass heading)
-if (window.DeviceOrientationEvent) {
-  window.addEventListener("deviceorientationabsolute", (event) => {
-    if (event.absolute === true || event.alpha !== null) {
-      deviceHeading = event.alpha; // 0 = North
-      updatePointer();
-    }
-  }, true);
-
-  // Fallback for browsers that only support deviceorientation
-  window.addEventListener("deviceorientation", (event) => {
-    if (event.alpha !== null && deviceHeading === 0) {
-      deviceHeading = event.alpha;
-      updatePointer();
-    }
-  }, true);
-} else {
-  console.error("DeviceOrientationEvent is not supported by your browser.");
+// Request device orientation permission (iOS 13+)
+function initOrientation() {
+  if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
+    DeviceOrientationEvent.requestPermission()
+      .then(response => {
+        if (response === "granted") {
+          window.addEventListener("deviceorientation", handleOrientation, true);
+        } else {
+          console.error("Device orientation permission denied");
+        }
+      })
+      .catch(console.error);
+  } else {
+    // Non-iOS devices
+    window.addEventListener("deviceorientation", handleOrientation, true);
+  }
 }
 
+function handleOrientation(event) {
+  if (event.alpha !== null) {
+    deviceHeading = event.alpha;
+    updatePointer();
+  }
+}
+
+// Initialize
+initOrientation();
 
 
 // location code 
@@ -109,6 +110,7 @@ btn.addEventListener("click", () => {
     infoDiv.textContent = "Geolocation is not supported by your browser.";
   }
 });
+
 
 
 
