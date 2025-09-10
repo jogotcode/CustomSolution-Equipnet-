@@ -1,6 +1,6 @@
 const img = document.getElementById("pointer");
 
-// Target location: Boston
+// Target location (Boston)
 const targetLat = 42.3601;
 const targetLon = -71.0589;
 
@@ -8,19 +8,12 @@ let currentLat = null;
 let currentLon = null;
 let deviceHeading = 0; // in degrees
 
-// Letter elements
-const letters = {
-  N: document.getElementById("North"),
-  E: document.getElementById("East"),
-  S: document.getElementById("South"),
-  W: document.getElementById("West")
-};
+// Convert degrees ↔ radians
+const toRad = deg => deg * Math.PI / 180;
+const toDeg = rad => rad * 180 / Math.PI;
 
 // Calculate bearing from current position to target
 function getBearing(lat1, lon1, lat2, lon2) {
-  const toRad = deg => deg * Math.PI / 180;
-  const toDeg = rad => rad * 180 / Math.PI;
-
   const dLon = toRad(lon2 - lon1);
   lat1 = toRad(lat1);
   lat2 = toRad(lat2);
@@ -29,52 +22,20 @@ function getBearing(lat1, lon1, lat2, lon2) {
   const x = Math.cos(lat1) * Math.sin(lat2) -
             Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
 
-  let brng = Math.atan2(y, x);
-  return (toDeg(brng) + 360) % 360;
+  return (toDeg(Math.atan2(y, x)) + 360) % 360;
 }
 
-// Update pointer rotation and letters
+// Update pointer rotation
 function updatePointer() {
   if (currentLat === null || currentLon === null) return;
 
   const bearing = getBearing(currentLat, currentLon, targetLat, targetLon);
-  const rotation = bearing - deviceHeading; 
-  img.style.transform = `translate(-50%, -50%) rotate(${rotation + 90}deg)`;
+  const rotation = bearing - deviceHeading;
 
-  // Highlight closest direction letter
-  highlightLetter(rotation);
+  img.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
 }
 
-// Highlight the nearest N/E/S/W
-function highlightLetter(rotation) {
-  // Normalize rotation to 0-360
-  const deg = (rotation + 360) % 360;
-
-  // Reset all letters
-  for (let key in letters) {
-    letters[key].style.transform = "scale(1)";
-  }
-
-  // Find closest direction
-  let closest = "N";
-  let minDiff = 360;
-
-  const directions = { N: 0, E: 90, S: 180, W: 270 };
-
-  for (let dir in directions) {
-    let diff = Math.abs(deg - directions[dir]);
-    if (diff > 180) diff = 360 - diff;
-    if (diff < minDiff) {
-      minDiff = diff;
-      closest = dir;
-    }
-  }
-
-  // Scale up the closest letter
-  letters[closest].style.transform = "scale(1.5)";
-}
-
-// Watch GPS position
+// Watch GPS updates
 if ("geolocation" in navigator) {
   navigator.geolocation.watchPosition(
     (pos) => {
@@ -86,48 +47,44 @@ if ("geolocation" in navigator) {
     { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
   );
 } else {
-  console.error("Geolocation is not supported by your browser.");
+  console.error("Geolocation not supported");
 }
 
-// Create "Enable Compass" button
-const enableBtn = document.createElement("button");
-enableBtn.textContent = "Enable Compass";
-enableBtn.style.position = "absolute";
-enableBtn.style.top = "20px";
-enableBtn.style.left = "50%";
-enableBtn.style.transform = "translateX(-50%)";
-enableBtn.style.padding = "10px 20px";
-enableBtn.style.fontSize = "16px";
-document.body.appendChild(enableBtn);
-
-// Request device orientation permission
-enableBtn.addEventListener("click", async () => {
-  if (typeof DeviceOrientationEvent !== "undefined" &&
-      typeof DeviceOrientationEvent.requestPermission === "function") {
-    try {
-      const response = await DeviceOrientationEvent.requestPermission();
-      if (response !== "granted") {
-        alert("Permission denied for device orientation");
-        return;
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Error requesting device orientation permission");
-      return;
-    }
+// Handle orientation (compass)
+function handleOrientation(event) {
+  if (event.absolute && event.alpha !== null) {
+    // Some browsers provide true heading
+    deviceHeading = 360 - event.alpha;
+  } else if (event.webkitCompassHeading !== undefined) {
+    // iOS Safari provides webkitCompassHeading
+    deviceHeading = event.webkitCompassHeading;
+  } else if (event.alpha !== null) {
+    // Fallback (less accurate)
+    deviceHeading = event.alpha;
   }
 
-  // Start listening to orientation
-  window.addEventListener("deviceorientation", (event) => {
-    if (event.alpha !== null) {
-      deviceHeading = event.alpha; // 0 = North
-      updatePointer();
-    }
-  });
+  updatePointer();
+}
 
-  // Hide the button after enabling
-  enableBtn.style.display = "none";
-});
+// Ask for permission (iOS 13+)
+function initOrientation() {
+  if (typeof DeviceOrientationEvent !== "undefined" &&
+      typeof DeviceOrientationEvent.requestPermission === "function") {
+    DeviceOrientationEvent.requestPermission()
+      .then(response => {
+        if (response === "granted") {
+          window.addEventListener("deviceorientation", handleOrientation, true);
+        } else {
+          console.error("Device orientation permission denied");
+        }
+      })
+      .catch(console.error);
+  } else {
+    window.addEventListener("deviceorientation", handleOrientation, true);
+  }
+}
+
+initOrientation();
 
 
 // location code 
@@ -162,6 +119,7 @@ btn.addEventListener("click", () => {
     infoDiv.textContent = "Geolocation is not supported by your browser.";
   }
 });
+
 
 
 
