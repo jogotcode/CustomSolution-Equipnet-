@@ -1,11 +1,10 @@
 const img = document.getElementById("pointer");
-const info = document.getElementById("info");
 
-// 🎯 Target location (example: Boston)
-const targetLat = 42.3601;
+// Target location (change these coordinates as needed)
+const targetLat = 42.3601; // example: Boston
 const targetLon = -71.0589;
 
-// Bearing calculation
+// Calculate bearing from current position to target
 function getBearing(lat1, lon1, lat2, lon2) {
   const toRad = deg => deg * Math.PI / 180;
   const toDeg = rad => rad * 180 / Math.PI;
@@ -19,29 +18,21 @@ function getBearing(lat1, lon1, lat2, lon2) {
             Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
 
   let brng = Math.atan2(y, x);
-  return (toDeg(brng) + 360) % 360; // normalize to 0–360
+  return (toDeg(brng) + 360) % 360; // normalize 0–360 degrees
 }
 
+// Continuously track your location and rotate the pointer
 if ("geolocation" in navigator) {
   navigator.geolocation.watchPosition(
     (pos) => {
-      const { latitude, longitude, accuracy } = pos.coords;
+      const { latitude, longitude } = pos.coords;
       const bearing = getBearing(latitude, longitude, targetLat, targetLon);
 
-      // Rotate image (+90 offset so north points up)
+      // Rotate the pointer image (+90 degrees if needed)
       img.style.transform = `translate(-50%, -50%) rotate(${bearing + 90}deg)`;
-
-      // Debug info
-      info.innerHTML = `
-        <strong>Updated:</strong> ${new Date().toLocaleTimeString()}<br>
-        <strong>Lat:</strong> ${latitude.toFixed(5)}<br>
-        <strong>Lon:</strong> ${longitude.toFixed(5)}<br>
-        <strong>Accuracy:</strong> ±${accuracy.toFixed(1)}m<br>
-        <strong>Bearing to Target:</strong> ${bearing.toFixed(2)}°
-      `;
     },
-    (error) => {
-      info.textContent = "Error: " + error.message;
+    (err) => {
+      console.error("Geolocation error:", err.message);
     },
     {
       enableHighAccuracy: true,
@@ -50,7 +41,7 @@ if ("geolocation" in navigator) {
     }
   );
 } else {
-  info.textContent = "Geolocation is not supported by your browser.";
+  console.error("Geolocation is not supported by your browser.");
 }
 
 
@@ -87,4 +78,5 @@ btn.addEventListener("click", () => {
     infoDiv.textContent = "Geolocation is not supported by your browser.";
   }
 });
+
 
