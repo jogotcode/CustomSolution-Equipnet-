@@ -32,7 +32,7 @@ function updatePointer() {
   const bearing = getBearing(currentLat, currentLon, targetLat, targetLon);
   const rotation = bearing - deviceHeading;
 
-  img.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
+  img.style.transform = `translate(-50%, -50%) rotate(${rotation + 90}deg)`;
 }
 
 // Watch GPS updates
@@ -119,6 +119,7 @@ btn.addEventListener("click", () => {
     infoDiv.textContent = "Geolocation is not supported by your browser.";
   }
 });
+
 
 
 
