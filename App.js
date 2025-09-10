@@ -1,17 +1,34 @@
 const img = document.getElementById("pointer");
 
-document.addEventListener("mousemove", (e) => {
-  const rect = img.getBoundingClientRect();
-  const imgX = rect.left + rect.width / 2;
-  const imgY = rect.top + rect.height / 2;
+// Target location (example: Boston)
+const targetLat = 42.3601;
+const targetLon = -71.0589;
 
-  const angle = Math.atan2(e.clientY - imgY, e.clientX - imgX);
-  const degrees = angle * (180 / Math.PI);
+function getBearing(lat1, lon1, lat2, lon2) {
+  const toRad = deg => deg * Math.PI / 180;
+  const toDeg = rad => rad * 180 / Math.PI;
 
-  // adjust for your image’s default orientation
-  img.style.transform = `translate(-50%, -50%) rotate(${degrees + 90}deg)`;
-});
+  const dLon = toRad(lon2 - lon1);
+  lat1 = toRad(lat1);
+  lat2 = toRad(lat2);
 
+  const y = Math.sin(dLon) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) -
+            Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+
+  let brng = Math.atan2(y, x);
+  return (toDeg(brng) + 360) % 360; // 0–360 degrees
+}
+
+if ("geolocation" in navigator) {
+  navigator.geolocation.watchPosition((pos) => {
+    const { latitude, longitude } = pos.coords;
+    const bearing = getBearing(latitude, longitude, targetLat, targetLon);
+
+    // rotate your image
+    img.style.transform = `translate(-50%, -50%) rotate(${bearing+90}deg)`;
+  });
+}
 
 
 
