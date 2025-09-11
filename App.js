@@ -67,6 +67,8 @@ function handleOrientation(event) {
 }
 
 // Ask for permission (iOS 13+)
+
+
 function initOrientation() {
   if (typeof DeviceOrientationEvent !== "undefined" &&
       typeof DeviceOrientationEvent.requestPermission === "function") {
@@ -84,7 +86,10 @@ function initOrientation() {
   }
 }
 
-initOrientation();
+const activateBtn = document.getElementById("ActivateBtn");
+activateBtn.addEventListener("click", () => {
+  initOrientation();
+});
 
 
 // location code 
@@ -119,6 +124,7 @@ btn.addEventListener("click", () => {
     infoDiv.textContent = "Geolocation is not supported by your browser.";
   }
 });
+
 
 
 
