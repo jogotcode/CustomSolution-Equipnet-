@@ -11,9 +11,6 @@ let currentLon = null;
 let deviceHeading = 0; // degrees
 let smoothedHeading = 0; // for smoothing pointer
 
-// Pointer orientation offset (auto-detect)
-let pointerOffset = 0;
-
 // Distance display
 const distanceDisplay = document.createElement("div");
 distanceDisplay.id = "DistanceDisplay";
@@ -31,6 +28,7 @@ document.body.appendChild(distanceDisplay);
 
 // ====== CONFIGURATION ======
 const smoothingFactor = 0.1; // 0 = no smoothing, 1 = max smoothing
+const pointerOffset = 0; // assume arrow points UP
 
 // ====== UTILITY FUNCTIONS ======
 const toRad = deg => deg * Math.PI / 180;
@@ -64,18 +62,6 @@ function getDistance(lat1, lon1, lat2, lon2) {
   return R * c; // distance in meters
 }
 
-// ====== AUTO-ADJUST POINTER ======
-function detectPointerOrientation() {
-  const tempImg = new Image();
-  tempImg.src = img.src;
-
-  tempImg.onload = () => {
-    if (tempImg.width > tempImg.height) pointerOffset = 90; // arrow points RIGHT
-    else pointerOffset = 0; // arrow points UP
-  };
-}
-detectPointerOrientation();
-
 // Smooth heading to reduce wobble
 function smoothHeading(newHeading) {
   smoothedHeading = smoothedHeading * (1 - smoothingFactor) + newHeading * smoothingFactor;
@@ -87,17 +73,15 @@ function updatePointer() {
 
   const bearing = getBearing(currentLat, currentLon, targetLat, targetLon);
   let rotation = (bearing - smoothedHeading + 360) % 360;
-  rotation += pointerOffset;
+  rotation += pointerOffset; // now always 0
 
   img.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
 
   // Update distance display
   const distance = getDistance(currentLat, currentLon, targetLat, targetLon);
-  if (distance < 1000) {
-    distanceDisplay.textContent = `Distance: ${distance.toFixed(1)} m`;
-  } else {
-    distanceDisplay.textContent = `Distance: ${(distance/1000).toFixed(2)} km`;
-  }
+  distanceDisplay.textContent = distance < 1000
+    ? `Distance: ${distance.toFixed(1)} m`
+    : `Distance: ${(distance / 1000).toFixed(2)} km`;
 }
 
 // ====== GEOLOCATION ======
@@ -188,6 +172,8 @@ if (pinBtn) pinBtn.addEventListener("click", savePinnedLocation);
 
 // Load pinned location on page load
 loadPinnedLocation();
+
+
 
 
 
