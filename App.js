@@ -112,9 +112,9 @@ btn.addEventListener("click", (event) => {
           <strong>Longitude:</strong> ${longitude} <br>
           <strong>Accuracy:</strong> ±${accuracy} meters
         `;
-        sessionStorage.setItem("latitude", latitude);
-        sessionStorage.setItem("longitude", longitude);
-        sessionStorage.setItem("accuracy", accuracy);
+        localStorage.setItem("latitude", latitude);
+        localStorage.setItem("longitude", longitude);
+        localStorage.setItem("accuracy", accuracy);
 
         // Update target immediately
         GetPinnedLocation();
@@ -129,11 +129,11 @@ btn.addEventListener("click", (event) => {
   }
 });
 
-// ====== SESSION STORAGE HANDLING ======
-// Load pinned location from sessionStorage
+// ====== Local STORAGE HANDLING ======
+// Load pinned location from LocalStorage
 function loadPinnedLocation() {
-  const lat = sessionStorage.getItem("latitude");
-  const lon = sessionStorage.getItem("longitude");
+  const lat = localStorage.getItem("latitude");
+  const lon = localStorage.getItem("longitude");
 
   targetLat = lat ? parseFloat(lat) : null;
   targetLon = lon ? parseFloat(lon) : null;
@@ -146,13 +146,3 @@ loadPinnedLocation();
 function GetPinnedLocation() {
   loadPinnedLocation();
 }
-
-
-
-
-
-
-
-
-
-
