@@ -1,13 +1,16 @@
+// ====== POINTER & LOCATION VARIABLES ======
 const img = document.getElementById("pointer");
 
-// Target location (Boston)
-const targetLat = 42.3601;
-const targetLon = -71.0589;
+// Target location (pinned location)
+let targetLat = null;
+let targetLon = null;
 
+// Current device location & heading
 let currentLat = null;
 let currentLon = null;
 let deviceHeading = 0; // in degrees
 
+// ====== UTILITY FUNCTIONS ======
 // Convert degrees ↔ radians
 const toRad = deg => deg * Math.PI / 180;
 const toDeg = rad => rad * 180 / Math.PI;
@@ -27,7 +30,10 @@ function getBearing(lat1, lon1, lat2, lon2) {
 
 // Update pointer rotation
 function updatePointer() {
-  if (currentLat === null || currentLon === null) return;
+  if (
+    currentLat === null || currentLon === null ||
+    targetLat === null || targetLon === null
+  ) return;
 
   const bearing = getBearing(currentLat, currentLon, targetLat, targetLon);
   const rotation = bearing - deviceHeading;
@@ -35,7 +41,7 @@ function updatePointer() {
   img.style.transform = `translate(-50%, -50%) rotate(${rotation + 90}deg)`;
 }
 
-// Watch GPS updates
+// ====== GEOLOCATION WATCH ======
 if ("geolocation" in navigator) {
   navigator.geolocation.watchPosition(
     (pos) => {
@@ -50,31 +56,27 @@ if ("geolocation" in navigator) {
   console.error("Geolocation not supported");
 }
 
-// Handle orientation (compass)
+// ====== DEVICE ORIENTATION (COMPASS) ======
 function handleOrientation(event) {
   if (event.absolute && event.alpha !== null) {
-    // Some browsers provide true heading
     deviceHeading = 360 - event.alpha;
   } else if (event.webkitCompassHeading !== undefined) {
-    // iOS Safari provides webkitCompassHeading
     deviceHeading = event.webkitCompassHeading;
   } else if (event.alpha !== null) {
-    // Fallback (less accurate)
     deviceHeading = event.alpha;
   }
 
   updatePointer();
 }
 
-// Ask for permission (iOS 13+)
-
-
+// Request orientation permission (iOS 13+)
 function initOrientation() {
   if (typeof DeviceOrientationEvent !== "undefined" &&
       typeof DeviceOrientationEvent.requestPermission === "function") {
     DeviceOrientationEvent.requestPermission()
       .then(response => {
         if (response === "granted") {
+          GetPinnedLocation();
           window.addEventListener("deviceorientation", handleOrientation, true);
         } else {
           console.error("Device orientation permission denied");
@@ -82,22 +84,22 @@ function initOrientation() {
       })
       .catch(console.error);
   } else {
+    GetPinnedLocation();
     window.addEventListener("deviceorientation", handleOrientation, true);
   }
 }
 
+// Activate button
 const activateBtn = document.getElementById("ActivateBtn");
 activateBtn.addEventListener("click", () => {
   initOrientation();
 });
 
-
-// location code 
-
+// ====== PIN LOCATION ======
 const infoDiv = document.getElementById("info");
 const btn = document.getElementById("PinLocation");
 
-btn.addEventListener("click", () => {
+btn.addEventListener("click", (event) => {
   event.preventDefault();
   if ("geolocation" in navigator) {
     infoDiv.textContent = "Getting location...";
@@ -110,20 +112,41 @@ btn.addEventListener("click", () => {
           <strong>Longitude:</strong> ${longitude} <br>
           <strong>Accuracy:</strong> ±${accuracy} meters
         `;
+        sessionStorage.setItem("latitude", latitude);
+        sessionStorage.setItem("longitude", longitude);
+        sessionStorage.setItem("accuracy", accuracy);
+
+        // Update target immediately
+        GetPinnedLocation();
       },
       (error) => {
         infoDiv.textContent = `Error: ${error.message}`;
       },
-      {
-        enableHighAccuracy: true, // request GPS if available
-        timeout: 10000,
-        maximumAge: 0
-      }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   } else {
     infoDiv.textContent = "Geolocation is not supported by your browser.";
   }
 });
+
+// ====== SESSION STORAGE HANDLING ======
+// Load pinned location from sessionStorage
+function loadPinnedLocation() {
+  const lat = sessionStorage.getItem("latitude");
+  const lon = sessionStorage.getItem("longitude");
+
+  targetLat = lat ? parseFloat(lat) : null;
+  targetLon = lon ? parseFloat(lon) : null;
+}
+
+// Call on page load
+loadPinnedLocation();
+
+// Update pinned location (called on button click or init)
+function GetPinnedLocation() {
+  loadPinnedLocation();
+}
+
 
 
 
