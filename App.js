@@ -120,16 +120,12 @@ function savePinnedLocation() {
 
 // ====== BUTTON HOOKS ======
 document.getElementById("ActivateBtn").addEventListener("click", initOrientation);
-document.getElementById("PinBtn").addEventListener("click", savePinnedLocation);
+document.getElementById("PinLocation").addEventListener("click", savePinnedLocation);
 
 // Load pinned location immediately when page opens
 loadPinnedLocation();
-
-    alert("No pinned location found. Please set one first.");
-  }
-}
-
 // ====== ACTIVATE COMPASS BUTTON ======
 document.getElementById("ActivateBtn").addEventListener("click", initOrientation);
+
 
 
