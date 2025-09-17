@@ -9,13 +9,16 @@ let targetLon = null;
 let currentLat = null;
 let currentLon = null;
 let deviceHeading = 0; // degrees
+let smoothedHeading = 0; // for smoothing pointer
+
+// ====== CONFIGURATION ======
+const smoothingFactor = 0.1; // 0 = no smoothing, 1 = max smoothing
 
 // ====== UTILITY FUNCTIONS ======
-// Degrees ↔ Radians
 const toRad = deg => deg * Math.PI / 180;
 const toDeg = rad => rad * 180 / Math.PI;
 
-// Bearing between two GPS coordinates
+// Bearing from current location to target
 function getBearing(lat1, lon1, lat2, lon2) {
   const dLon = toRad(lon2 - lon1);
   lat1 = toRad(lat1);
@@ -28,15 +31,22 @@ function getBearing(lat1, lon1, lat2, lon2) {
   return (toDeg(Math.atan2(y, x)) + 360) % 360;
 }
 
-// Rotate pointer towards target
+// ====== POINTER ROTATION ======
 function updatePointer() {
   if (!currentLat || !currentLon || !targetLat || !targetLon) return;
 
   const bearing = getBearing(currentLat, currentLon, targetLat, targetLon);
-  const rotation = bearing - deviceHeading;
+  let rotation = (bearing - smoothedHeading + 360) % 360;
 
-  // "+90" adjusts depending on arrow graphic orientation
-  img.style.transform = `translate(-50%, -50%) rotate(${rotation + 90}deg)`;
+  // Adjust depending on pointer image orientation
+  rotation += 0; // tweak if your arrow image is not pointing up by default
+
+  img.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
+}
+
+// Smooth the heading to reduce wobble
+function smoothHeading(newHeading) {
+  smoothedHeading = smoothedHeading * (1 - smoothingFactor) + newHeading * smoothingFactor;
 }
 
 // ====== GEOLOCATION ======
@@ -56,23 +66,27 @@ if ("geolocation" in navigator) {
 
 // ====== DEVICE ORIENTATION ======
 function handleOrientation(event) {
+  let heading = 0;
+
   if (event.webkitCompassHeading !== undefined) {
-    // iOS Safari / Chrome on iOS
-    deviceHeading = event.webkitCompassHeading;
+    // iOS: heading in degrees from magnetic north
+    heading = event.webkitCompassHeading;
   } else if (event.absolute && event.alpha !== null) {
     // Android & some browsers
-    deviceHeading = 360 - event.alpha;
+    heading = 360 - event.alpha;
   } else if (event.alpha !== null) {
-    // Fallback
-    deviceHeading = event.alpha;
+    heading = event.alpha;
   }
+
+  smoothHeading(heading);
   updatePointer();
 }
 
+// ====== INITIALIZE COMPASS ======
 function initOrientation() {
   if (typeof DeviceOrientationEvent !== "undefined" &&
       typeof DeviceOrientationEvent.requestPermission === "function") {
-    // iOS 13+ (Safari/Chrome on iOS)
+    // iOS 13+ requires user permission
     DeviceOrientationEvent.requestPermission()
       .then(response => {
         if (response === "granted") {
@@ -85,14 +99,14 @@ function initOrientation() {
       })
       .catch(console.error);
   } else {
-    // Android + desktop
+    // Android + older browsers
     loadPinnedLocation();
     window.addEventListener("deviceorientationabsolute", handleOrientation, true);
     window.addEventListener("deviceorientation", handleOrientation, true);
   }
 }
 
-// ====== PINNED LOCATION ======
+// ====== PINNED LOCATION HANDLING ======
 function loadPinnedLocation() {
   const lat = localStorage.getItem("latitude");
   const lon = localStorage.getItem("longitude");
@@ -102,7 +116,7 @@ function loadPinnedLocation() {
     targetLon = parseFloat(lon);
     console.log("Pinned location loaded:", targetLat, targetLon);
   } else {
-    console.log("No pinned location found.");
+    console.log("No pinned location found. Use 'Pin Location' to set one.");
   }
 }
 
@@ -113,7 +127,7 @@ function savePinnedLocation() {
     localStorage.setItem("longitude", currentLon);
     targetLat = currentLat;
     targetLon = currentLon;
-    alert(`Pinned location saved:\nLat: ${currentLat}, Lon: ${currentLon}`);
+    alert(`Pinned location saved:\nLat: ${currentLat}\nLon: ${currentLon}`);
   } else {
     alert("Current location not available yet. Try again in a moment.");
   }
@@ -126,8 +140,9 @@ if (activateBtn) activateBtn.addEventListener("click", initOrientation);
 const pinBtn = document.getElementById("PinLocation");
 if (pinBtn) pinBtn.addEventListener("click", savePinnedLocation);
 
-// Load pinned location immediately when page opens
+// Load pinned location on page load
 loadPinnedLocation();
+
 
 
 
