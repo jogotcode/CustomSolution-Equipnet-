@@ -15,7 +15,7 @@ let smoothedHeading = 0; // for smoothing pointer
 const distanceDisplay = document.createElement("div");
 distanceDisplay.id = "DistanceDisplay";
 distanceDisplay.style.position = "absolute";
-distanceDisplay.style.top = "10px";
+distanceDisplay.style.bottom = "20px";   // move to bottom
 distanceDisplay.style.left = "50%";
 distanceDisplay.style.transform = "translateX(-50%)";
 distanceDisplay.style.background = "rgba(0,0,0,0.5)";
@@ -27,14 +27,13 @@ distanceDisplay.style.fontSize = "16px";
 document.body.appendChild(distanceDisplay);
 
 // ====== CONFIGURATION ======
-const smoothingFactor = 0.1; // 0 = no smoothing, 1 = max smoothing
-const pointerOffset = 0; // assume arrow points UP
+const smoothingFactor = 0.1; // smoothing
+const pointerOffset = 180; // rotate 180° so top points forward
 
 // ====== UTILITY FUNCTIONS ======
 const toRad = deg => deg * Math.PI / 180;
 const toDeg = rad => rad * 180 / Math.PI;
 
-// Bearing from current location to target
 function getBearing(lat1, lon1, lat2, lon2) {
   const dLon = toRad(lon2 - lon1);
   lat1 = toRad(lat1);
@@ -47,9 +46,8 @@ function getBearing(lat1, lon1, lat2, lon2) {
   return (toDeg(Math.atan2(y, x)) + 360) % 360;
 }
 
-// Distance between two GPS points (Haversine formula)
 function getDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371000; // Earth radius in meters
+  const R = 6371000; // meters
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
   lat1 = toRad(lat1);
@@ -58,11 +56,9 @@ function getDistance(lat1, lon1, lat2, lon2) {
   const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
             Math.sin(dLon/2) * Math.sin(dLon/2) * Math.cos(lat1) * Math.cos(lat2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
-  return R * c; // distance in meters
+  return R * c;
 }
 
-// Smooth heading to reduce wobble
 function smoothHeading(newHeading) {
   smoothedHeading = smoothedHeading * (1 - smoothingFactor) + newHeading * smoothingFactor;
 }
@@ -73,11 +69,10 @@ function updatePointer() {
 
   const bearing = getBearing(currentLat, currentLon, targetLat, targetLon);
   let rotation = (bearing - smoothedHeading + 360) % 360;
-  rotation += pointerOffset; // now always 0
+  rotation += pointerOffset;
 
   img.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
 
-  // Update distance display
   const distance = getDistance(currentLat, currentLon, targetLat, targetLon);
   distanceDisplay.textContent = distance < 1000
     ? `Distance: ${distance.toFixed(1)} m`
@@ -137,7 +132,7 @@ function initOrientation() {
   }
 }
 
-// ====== PINNED LOCATION HANDLING ======
+// ====== PINNED LOCATION ======
 function loadPinnedLocation() {
   const lat = localStorage.getItem("latitude");
   const lon = localStorage.getItem("longitude");
@@ -145,9 +140,8 @@ function loadPinnedLocation() {
   if (lat && lon) {
     targetLat = parseFloat(lat);
     targetLon = parseFloat(lon);
-    console.log("Pinned location loaded:", targetLat, targetLon);
   } else {
-    console.log("No pinned location found. Use 'Pin Location' to set one.");
+    console.log("No pinned location found.");
   }
 }
 
@@ -172,6 +166,7 @@ if (pinBtn) pinBtn.addEventListener("click", savePinnedLocation);
 
 // Load pinned location on page load
 loadPinnedLocation();
+
 
 
 
