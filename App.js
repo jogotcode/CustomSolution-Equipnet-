@@ -1,21 +1,21 @@
 // ====== POINTER & LOCATION VARIABLES ======
 const img = document.getElementById("pointer");
 
-// Target location (pinned location)
+// Target location (pinned location from localStorage)
 let targetLat = null;
 let targetLon = null;
 
 // Current device location & heading
 let currentLat = null;
 let currentLon = null;
-let deviceHeading = 0; // in degrees
+let deviceHeading = 0; // degrees
 
 // ====== UTILITY FUNCTIONS ======
-// Convert degrees ↔ radians
+// Degrees ↔ Radians
 const toRad = deg => deg * Math.PI / 180;
 const toDeg = rad => rad * 180 / Math.PI;
 
-// Calculate bearing from current position to target
+// Bearing between two GPS coordinates
 function getBearing(lat1, lon1, lat2, lon2) {
   const dLon = toRad(lon2 - lon1);
   lat1 = toRad(lat1);
@@ -28,121 +28,83 @@ function getBearing(lat1, lon1, lat2, lon2) {
   return (toDeg(Math.atan2(y, x)) + 360) % 360;
 }
 
-// Update pointer rotation
+// Rotate pointer towards target
 function updatePointer() {
-  if (
-    currentLat === null || currentLon === null ||
-    targetLat === null || targetLon === null
-  ) return;
+  if (!currentLat || !currentLon || !targetLat || !targetLon) return;
 
   const bearing = getBearing(currentLat, currentLon, targetLat, targetLon);
   const rotation = bearing - deviceHeading;
 
+  // "+90" = adjust depending on your pointer image orientation
   img.style.transform = `translate(-50%, -50%) rotate(${rotation + 90}deg)`;
 }
 
-// ====== GEOLOCATION WATCH ======
+// ====== GEOLOCATION ======
 if ("geolocation" in navigator) {
   navigator.geolocation.watchPosition(
-    (pos) => {
+    pos => {
       currentLat = pos.coords.latitude;
       currentLon = pos.coords.longitude;
       updatePointer();
     },
-    (err) => console.error("Geolocation error:", err.message),
+    err => console.error("Geolocation error:", err.message),
     { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
   );
 } else {
-  console.error("Geolocation not supported");
+  alert("Geolocation not supported on this device.");
 }
 
-// ====== DEVICE ORIENTATION (COMPASS) ======
+// ====== DEVICE ORIENTATION ======
 function handleOrientation(event) {
-  if (event.absolute && event.alpha !== null) {
-    deviceHeading = 360 - event.alpha;
-  } else if (event.webkitCompassHeading !== undefined) {
+  if (event.webkitCompassHeading !== undefined) {
+    // iOS Safari / Chrome on iOS
     deviceHeading = event.webkitCompassHeading;
+  } else if (event.absolute && event.alpha !== null) {
+    // Android & some browsers
+    deviceHeading = 360 - event.alpha;
   } else if (event.alpha !== null) {
+    // Fallback
     deviceHeading = event.alpha;
   }
-
   updatePointer();
 }
 
-// Request orientation permission (iOS 13+)
 function initOrientation() {
   if (typeof DeviceOrientationEvent !== "undefined" &&
       typeof DeviceOrientationEvent.requestPermission === "function") {
+    // iOS 13+ (Safari/Chrome on iOS)
     DeviceOrientationEvent.requestPermission()
       .then(response => {
         if (response === "granted") {
-          GetPinnedLocation();
+          loadPinnedLocation();
+          window.addEventListener("deviceorientationabsolute", handleOrientation, true);
           window.addEventListener("deviceorientation", handleOrientation, true);
         } else {
-          console.error("Device orientation permission denied");
+          alert("Compass access denied.");
         }
       })
       .catch(console.error);
   } else {
-    GetPinnedLocation();
+    // Android + desktop
+    loadPinnedLocation();
+    window.addEventListener("deviceorientationabsolute", handleOrientation, true);
     window.addEventListener("deviceorientation", handleOrientation, true);
   }
 }
 
-// Activate button
-const activateBtn = document.getElementById("ActivateBtn");
-activateBtn.addEventListener("click", () => {
-  initOrientation();
-});
-
-// ====== PIN LOCATION ======
-const infoDiv = document.getElementById("info");
-const btn = document.getElementById("PinLocation");
-
-btn.addEventListener("click", (event) => {
-  event.preventDefault();
-  if ("geolocation" in navigator) {
-    infoDiv.textContent = "Getting location...";
-    
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude, accuracy } = position.coords;
-        infoDiv.innerHTML = `
-          <strong>Latitude:</strong> ${latitude} <br>
-          <strong>Longitude:</strong> ${longitude} <br>
-          <strong>Accuracy:</strong> ±${accuracy} meters
-        `;
-        localStorage.setItem("latitude", latitude);
-        localStorage.setItem("longitude", longitude);
-        localStorage.setItem("accuracy", accuracy);
-
-        // Update target immediately
-        GetPinnedLocation();
-      },
-      (error) => {
-        infoDiv.textContent = `Error: ${error.message}`;
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
-  } else {
-    infoDiv.textContent = "Geolocation is not supported by your browser.";
-  }
-});
-
-// ====== Local STORAGE HANDLING ======
-// Load pinned location from LocalStorage
+// ====== PINNED LOCATION ======
 function loadPinnedLocation() {
   const lat = localStorage.getItem("latitude");
   const lon = localStorage.getItem("longitude");
 
-  targetLat = lat ? parseFloat(lat) : null;
-  targetLon = lon ? parseFloat(lon) : null;
+  if (lat && lon) {
+    targetLat = parseFloat(lat);
+    targetLon = parseFloat(lon);
+  } else {
+    alert("No pinned location found. Please set one first.");
+  }
 }
 
-// Call on page load
-loadPinnedLocation();
+// ====== ACTIVATE COMPASS BUTTON ======
+document.getElementById("ActivateBtn").addEventListener("click", initOrientation);
 
-// Update pinned location (called on button click or init)
-function GetPinnedLocation() {
-  loadPinnedLocation();
-}
