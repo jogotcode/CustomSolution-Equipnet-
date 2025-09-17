@@ -1,21 +1,23 @@
 // ====== POINTER & LOCATION VARIABLES ======
 const img = document.getElementById("pointer");
 
-// Target location (pinned location from localStorage)
+// Target location from localStorage
 let targetLat = null;
 let targetLon = null;
 
-// Current device location & heading
+// Current device location
 let currentLat = null;
 let currentLon = null;
-let deviceHeading = 0; // degrees
-let smoothedHeading = 0; // for smoothing pointer
 
-// Distance display
+// Heading
+let deviceHeading = 0;
+let smoothedHeading = 0;
+
+// Distance UI
 const distanceDisplay = document.createElement("div");
 distanceDisplay.id = "DistanceDisplay";
 distanceDisplay.style.position = "absolute";
-distanceDisplay.style.bottom = "20px";   // move to bottom
+distanceDisplay.style.bottom = "20px";
 distanceDisplay.style.left = "50%";
 distanceDisplay.style.transform = "translateX(-50%)";
 distanceDisplay.style.background = "rgba(0,0,0,0.5)";
@@ -26,11 +28,13 @@ distanceDisplay.style.fontFamily = "Arial, sans-serif";
 distanceDisplay.style.fontSize = "16px";
 document.body.appendChild(distanceDisplay);
 
-// ====== CONFIGURATION ======
-const smoothingFactor = 0.1; // smoothing
-const pointerOffset = 180; // rotate 180° so top points forward
+// ====== CONFIG ======
+const smoothingFactor = 0.1; // pointer smoothing
+const pointerOffset = 180;   // adjust if pointer image points down
 
-// ====== UTILITY FUNCTIONS ======
+const arrivalThreshold = 5; // meters for “You’ve arrived!”
+
+// ====== UTILITY ======
 const toRad = deg => deg * Math.PI / 180;
 const toDeg = rad => rad * 180 / Math.PI;
 
@@ -38,11 +42,9 @@ function getBearing(lat1, lon1, lat2, lon2) {
   const dLon = toRad(lon2 - lon1);
   lat1 = toRad(lat1);
   lat2 = toRad(lat2);
-
   const y = Math.sin(dLon) * Math.cos(lat2);
   const x = Math.cos(lat1) * Math.sin(lat2) -
             Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
-
   return (toDeg(Math.atan2(y, x)) + 360) % 360;
 }
 
@@ -52,9 +54,8 @@ function getDistance(lat1, lon1, lat2, lon2) {
   const dLon = toRad(lon2 - lon1);
   lat1 = toRad(lat1);
   lat2 = toRad(lat2);
-
-  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.sin(dLon/2) * Math.sin(dLon/2) * Math.cos(lat1) * Math.cos(lat2);
+  const a = Math.sin(dLat/2)**2 +
+            Math.sin(dLon/2)**2 * Math.cos(lat1) * Math.cos(lat2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   return R * c;
 }
@@ -77,6 +78,14 @@ function updatePointer() {
   distanceDisplay.textContent = distance < 1000
     ? `Distance: ${distance.toFixed(1)} m`
     : `Distance: ${(distance / 1000).toFixed(2)} km`;
+
+  // Arrival feedback
+  if (distance <= arrivalThreshold) {
+    distanceDisplay.textContent += " — You’ve arrived!";
+    img.style.filter = "hue-rotate(120deg)"; // pointer turns green
+  } else {
+    img.style.filter = "none";
+  }
 }
 
 // ====== GEOLOCATION ======
@@ -97,7 +106,6 @@ if ("geolocation" in navigator) {
 // ====== DEVICE ORIENTATION ======
 function handleOrientation(event) {
   let heading = 0;
-
   if (event.webkitCompassHeading !== undefined) {
     heading = event.webkitCompassHeading;
   } else if (event.absolute && event.alpha !== null) {
@@ -105,12 +113,10 @@ function handleOrientation(event) {
   } else if (event.alpha !== null) {
     heading = event.alpha;
   }
-
   smoothHeading(heading);
   updatePointer();
 }
 
-// ====== INITIALIZE COMPASS ======
 function initOrientation() {
   if (typeof DeviceOrientationEvent !== "undefined" &&
       typeof DeviceOrientationEvent.requestPermission === "function") {
@@ -136,7 +142,6 @@ function initOrientation() {
 function loadPinnedLocation() {
   const lat = localStorage.getItem("latitude");
   const lon = localStorage.getItem("longitude");
-
   if (lat && lon) {
     targetLat = parseFloat(lat);
     targetLon = parseFloat(lon);
@@ -152,6 +157,7 @@ function savePinnedLocation() {
     targetLat = currentLat;
     targetLon = currentLon;
     alert(`Pinned location saved:\nLat: ${currentLat}\nLon: ${currentLon}`);
+    updatePointer();
   } else {
     alert("Current location not available yet. Try again in a moment.");
   }
@@ -166,6 +172,7 @@ if (pinBtn) pinBtn.addEventListener("click", savePinnedLocation);
 
 // Load pinned location on page load
 loadPinnedLocation();
+
 
 
 
