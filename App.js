@@ -14,6 +14,21 @@ let smoothedHeading = 0; // for smoothing pointer
 // Pointer orientation offset (auto-detect)
 let pointerOffset = 0;
 
+// Distance display
+const distanceDisplay = document.createElement("div");
+distanceDisplay.id = "DistanceDisplay";
+distanceDisplay.style.position = "absolute";
+distanceDisplay.style.top = "10px";
+distanceDisplay.style.left = "50%";
+distanceDisplay.style.transform = "translateX(-50%)";
+distanceDisplay.style.background = "rgba(0,0,0,0.5)";
+distanceDisplay.style.color = "white";
+distanceDisplay.style.padding = "5px 10px";
+distanceDisplay.style.borderRadius = "5px";
+distanceDisplay.style.fontFamily = "Arial, sans-serif";
+distanceDisplay.style.fontSize = "16px";
+document.body.appendChild(distanceDisplay);
+
 // ====== CONFIGURATION ======
 const smoothingFactor = 0.1; // 0 = no smoothing, 1 = max smoothing
 
@@ -34,6 +49,21 @@ function getBearing(lat1, lon1, lat2, lon2) {
   return (toDeg(Math.atan2(y, x)) + 360) % 360;
 }
 
+// Distance between two GPS points (Haversine formula)
+function getDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371000; // Earth radius in meters
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  lat1 = toRad(lat1);
+  lat2 = toRad(lat2);
+
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.sin(dLon/2) * Math.sin(dLon/2) * Math.cos(lat1) * Math.cos(lat2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+  return R * c; // distance in meters
+}
+
 // ====== AUTO-ADJUST POINTER ======
 function detectPointerOrientation() {
   const tempImg = new Image();
@@ -44,8 +74,6 @@ function detectPointerOrientation() {
     else pointerOffset = 0; // arrow points UP
   };
 }
-
-// Call on page load
 detectPointerOrientation();
 
 // Smooth heading to reduce wobble
@@ -53,17 +81,23 @@ function smoothHeading(newHeading) {
   smoothedHeading = smoothedHeading * (1 - smoothingFactor) + newHeading * smoothingFactor;
 }
 
-// ====== UPDATE POINTER ======
+// ====== UPDATE POINTER & DISTANCE ======
 function updatePointer() {
   if (!currentLat || !currentLon || !targetLat || !targetLon) return;
 
   const bearing = getBearing(currentLat, currentLon, targetLat, targetLon);
   let rotation = (bearing - smoothedHeading + 360) % 360;
-
-  // Apply pointer offset automatically
   rotation += pointerOffset;
 
   img.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
+
+  // Update distance display
+  const distance = getDistance(currentLat, currentLon, targetLat, targetLon);
+  if (distance < 1000) {
+    distanceDisplay.textContent = `Distance: ${distance.toFixed(1)} m`;
+  } else {
+    distanceDisplay.textContent = `Distance: ${(distance/1000).toFixed(2)} km`;
+  }
 }
 
 // ====== GEOLOCATION ======
@@ -86,13 +120,10 @@ function handleOrientation(event) {
   let heading = 0;
 
   if (event.webkitCompassHeading !== undefined) {
-    // iOS: heading in degrees from magnetic north
     heading = event.webkitCompassHeading;
   } else if (event.absolute && event.alpha !== null) {
-    // Android & some browsers
     heading = 360 - event.alpha;
   } else if (event.alpha !== null) {
-    // Fallback
     heading = event.alpha;
   }
 
@@ -104,7 +135,6 @@ function handleOrientation(event) {
 function initOrientation() {
   if (typeof DeviceOrientationEvent !== "undefined" &&
       typeof DeviceOrientationEvent.requestPermission === "function") {
-    // iOS 13+ requires user permission
     DeviceOrientationEvent.requestPermission()
       .then(response => {
         if (response === "granted") {
@@ -117,7 +147,6 @@ function initOrientation() {
       })
       .catch(console.error);
   } else {
-    // Android + older browsers
     loadPinnedLocation();
     window.addEventListener("deviceorientationabsolute", handleOrientation, true);
     window.addEventListener("deviceorientation", handleOrientation, true);
@@ -138,7 +167,6 @@ function loadPinnedLocation() {
   }
 }
 
-// Save current location as pinned target
 function savePinnedLocation() {
   if (currentLat && currentLon) {
     localStorage.setItem("latitude", currentLat);
@@ -160,6 +188,8 @@ if (pinBtn) pinBtn.addEventListener("click", savePinnedLocation);
 
 // Load pinned location on page load
 loadPinnedLocation();
+
+
 
 
 
