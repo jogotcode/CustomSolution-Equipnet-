@@ -3,20 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
-  <link rel="stylesheet" href="./Form.css">
+  <title>Compass</title>
+  <link rel="stylesheet" href="./style.css">
 </head>
 <body>
- <a href="./Compass.html"><button>Open Compess</button></a>
+  <div id="compassbackground"></div>
+  <div id="Compass">
+    <img id="pointer" src="./pointing.png" alt="Compass Image">
+    <p id="North">N</p>
+    <p id="West">W</p>
+    <p id="South">S</p>
+    <p id="East">E</p>
+  </div>
 
-  <form id="PinLocationForm">
-    <h1>Pin Location</h1>
-    <p>Enter A Item Number and Save Its Location</p>
-    <input type="text" placeholder="Item number">
-    <button id="PinLocation">Pin Location</button>
-    <div id="info"></div>
-  </form>
+  <a href="./index.html"><button id="Backbtn">Back</button></a>
+  <button id="Foundbtn">FoundItem</button>
+  <button id="ActivateBtn">Activate Compass</button>
 
+  <!-- Load the external JS -->
   <script src="./App.js"></script>
 </body>
 </html>
+
