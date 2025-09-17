@@ -35,7 +35,7 @@ function updatePointer() {
   const bearing = getBearing(currentLat, currentLon, targetLat, targetLon);
   const rotation = bearing - deviceHeading;
 
-  // "+90" = adjust depending on your pointer image orientation
+  // "+90" adjusts depending on arrow graphic orientation
   img.style.transform = `translate(-50%, -50%) rotate(${rotation + 90}deg)`;
 }
 
@@ -100,8 +100,9 @@ function loadPinnedLocation() {
   if (lat && lon) {
     targetLat = parseFloat(lat);
     targetLon = parseFloat(lon);
+    console.log("Pinned location loaded:", targetLat, targetLon);
   } else {
-    console.log("No pinned location found. Use 'Pin Location' to set one.");
+    console.log("No pinned location found.");
   }
 }
 
@@ -119,13 +120,15 @@ function savePinnedLocation() {
 }
 
 // ====== BUTTON HOOKS ======
-document.getElementById("ActivateBtn").addEventListener("click", initOrientation);
-document.getElementById("PinLocation").addEventListener("click", savePinnedLocation);
+const activateBtn = document.getElementById("ActivateBtn");
+if (activateBtn) activateBtn.addEventListener("click", initOrientation);
+
+const pinBtn = document.getElementById("PinLocation");
+if (pinBtn) pinBtn.addEventListener("click", savePinnedLocation);
 
 // Load pinned location immediately when page opens
 loadPinnedLocation();
-// ====== ACTIVATE COMPASS BUTTON ======
-document.getElementById("ActivateBtn").addEventListener("click", initOrientation);
+
 
 
 
