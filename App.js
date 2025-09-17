@@ -101,10 +101,35 @@ function loadPinnedLocation() {
     targetLat = parseFloat(lat);
     targetLon = parseFloat(lon);
   } else {
+    console.log("No pinned location found. Use 'Pin Location' to set one.");
+  }
+}
+
+// Save current location as pinned target
+function savePinnedLocation() {
+  if (currentLat && currentLon) {
+    localStorage.setItem("latitude", currentLat);
+    localStorage.setItem("longitude", currentLon);
+    targetLat = currentLat;
+    targetLon = currentLon;
+    alert(`Pinned location saved:\nLat: ${currentLat}, Lon: ${currentLon}`);
+  } else {
+    alert("Current location not available yet. Try again in a moment.");
+  }
+}
+
+// ====== BUTTON HOOKS ======
+document.getElementById("ActivateBtn").addEventListener("click", initOrientation);
+document.getElementById("PinBtn").addEventListener("click", savePinnedLocation);
+
+// Load pinned location immediately when page opens
+loadPinnedLocation();
+
     alert("No pinned location found. Please set one first.");
   }
 }
 
 // ====== ACTIVATE COMPASS BUTTON ======
 document.getElementById("ActivateBtn").addEventListener("click", initOrientation);
+
 
