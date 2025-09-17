@@ -11,6 +11,9 @@ let currentLon = null;
 let deviceHeading = 0; // degrees
 let smoothedHeading = 0; // for smoothing pointer
 
+// Pointer orientation offset (auto-detect)
+let pointerOffset = 0;
+
 // ====== CONFIGURATION ======
 const smoothingFactor = 0.1; // 0 = no smoothing, 1 = max smoothing
 
@@ -31,22 +34,36 @@ function getBearing(lat1, lon1, lat2, lon2) {
   return (toDeg(Math.atan2(y, x)) + 360) % 360;
 }
 
-// ====== POINTER ROTATION ======
+// ====== AUTO-ADJUST POINTER ======
+function detectPointerOrientation() {
+  const tempImg = new Image();
+  tempImg.src = img.src;
+
+  tempImg.onload = () => {
+    if (tempImg.width > tempImg.height) pointerOffset = 90; // arrow points RIGHT
+    else pointerOffset = 0; // arrow points UP
+  };
+}
+
+// Call on page load
+detectPointerOrientation();
+
+// Smooth heading to reduce wobble
+function smoothHeading(newHeading) {
+  smoothedHeading = smoothedHeading * (1 - smoothingFactor) + newHeading * smoothingFactor;
+}
+
+// ====== UPDATE POINTER ======
 function updatePointer() {
   if (!currentLat || !currentLon || !targetLat || !targetLon) return;
 
   const bearing = getBearing(currentLat, currentLon, targetLat, targetLon);
   let rotation = (bearing - smoothedHeading + 360) % 360;
 
-  // Adjust depending on pointer image orientation
-  rotation += 0; // tweak if your arrow image is not pointing up by default
+  // Apply pointer offset automatically
+  rotation += pointerOffset;
 
   img.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
-}
-
-// Smooth the heading to reduce wobble
-function smoothHeading(newHeading) {
-  smoothedHeading = smoothedHeading * (1 - smoothingFactor) + newHeading * smoothingFactor;
 }
 
 // ====== GEOLOCATION ======
@@ -75,6 +92,7 @@ function handleOrientation(event) {
     // Android & some browsers
     heading = 360 - event.alpha;
   } else if (event.alpha !== null) {
+    // Fallback
     heading = event.alpha;
   }
 
@@ -142,6 +160,9 @@ if (pinBtn) pinBtn.addEventListener("click", savePinnedLocation);
 
 // Load pinned location on page load
 loadPinnedLocation();
+
+
+
 
 
 
